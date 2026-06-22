@@ -1,1 +1,5 @@
 .superpowers/
+server/.env
+.env
+node_modules/
+

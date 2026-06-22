@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+enum Role {
+  teacher
+  school_admin
+  superadmin
+}
+
+enum Board {
+  RBSE
+  CBSE
+}
+
+enum Language {
+  English
+  Hindi
+}
+
+enum Medium {
+  English
+  Hindi
+}
+
+enum QuestionType {
+  MCQ
+  ShortAnswer
+  LongAnswer
+  FillInBlank
+  TrueFalse
+  MatchColumn
+}
+
+enum Difficulty {
+  Easy
+  Medium
+  Hard
+}
+
+enum Source {
+  platform
+  teacher
+}
+
+enum ExamType {
+  UnitTest
+  MidTerm
+  Final
+  PreBoard
+  Custom
+}
+
+enum PaperStatus {
+  draft
+  generating
+  generated
+  failed
+}
+
+enum Plan {
+  free
+  teacher_pro
+  school_basic
+  school_pro
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  role         Role      @default(teacher)
+  schoolId     String?   @map("school_id")
+  school       School?   @relation(fields: [schoolId], references: [id])
+  isActive     Boolean   @default(true) @map("is_active")
+  resetToken   String?   @map("reset_token")
+  resetTokenAt DateTime? @map("reset_token_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  papers       Paper[]
+  questions    Question[]
+
+  @@map("users")
+}
+
+model School {
+  id           String        @id @default(cuid())
+  name         String
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  users        User[]
+  papers       Paper[]
+  subscription Subscription?
+
+  @@map("schools")
+}
+
+model Question {
+  id             String          @id @default(cuid())
+  board          Board
+  class          Int
+  subject        String
+  chapterNo      Int?            @map("chapter_no")
+  chapterName    String          @map("chapter_name")
+  topic          String?
+  language       Language
+  medium         Medium
+  type           QuestionType
+  questionText   String          @map("question_text")
+  optionA        String?         @map("option_a")
+  optionB        String?         @map("option_b")
+  optionC        String?         @map("option_c")
+  optionD        String?         @map("option_d")
+  correctAnswer  String          @map("correct_answer")
+  explanation    String?
+  marks          Int
+  difficulty     Difficulty
+  source         Source          @default(platform)
+  teacherId      String?         @map("teacher_id")
+  teacher        User?           @relation(fields: [teacherId], references: [id])
+  isApproved     Boolean         @default(false) @map("is_approved")
+  isActive       Boolean         @default(true) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  paperQuestions PaperQuestion[]
+
+  @@map("questions")
+}
+
+model Blueprint {
+  id          String   @id @default(cuid())
+  board       Board
+  class       Int
+  subject     String
+  name        String
+  sections    Json
+  totalMarks  Int      @map("total_marks")
+  timeMinutes Int      @map("time_minutes")
+  isOfficial  Boolean  @default(true) @map("is_official")
+  createdAt   DateTime @default(now()) @map("created_at")
+  papers      Paper[]
+
+  @@map("blueprints")
+}
+
+model Paper {
+  id               String          @id @default(cuid())
+  teacherId        String          @map("teacher_id")
+  teacher          User            @relation(fields: [teacherId], references: [id])
+  schoolId         String          @map("school_id")
+  school           School          @relation(fields: [schoolId], references: [id])
+  blueprintId      String?         @map("blueprint_id")
+  blueprint        Blueprint?      @relation(fields: [blueprintId], references: [id])
+  board            Board
+  class            Int
+  subject          String
+  medium           Medium
+  examType         ExamType        @map("exam_type")
+  examTitle        String          @map("exam_title")
+  academicYear     String          @map("academic_year")
+  examDate         DateTime?       @map("exam_date")
+  timeAllowed      Int             @map("time_allowed")
+  maxMarks         Int             @map("max_marks")
+  instructions     String?
+  includeAnswerKey Boolean         @default(true) @map("include_answer_key")
+  status           PaperStatus     @default(draft)
+  pdfUrl           String?         @map("pdf_url")
+  answerKeyUrl     String?         @map("answer_key_url")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  questions        PaperQuestion[]
+
+  @@map("papers")
+}
+
+model PaperQuestion {
+  id            String   @id @default(cuid())
+  paperId       String   @map("paper_id")
+  paper         Paper    @relation(fields: [paperId], references: [id])
+  questionId    String   @map("question_id")
+  question      Question @relation(fields: [questionId], references: [id])
+  sectionName   String   @map("section_name")
+  orderNo       Int      @map("order_no")
+  marksOverride Int?     @map("marks_override")
+
+  @@map("paper_questions")
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  schoolId      String?  @unique @map("school_id")
+  school        School?  @relation(fields: [schoolId], references: [id])
+  userId        String?  @map("user_id")
+  plan          Plan
+  startsAt      DateTime @map("starts_at")
+  endsAt        DateTime @map("ends_at")
+  isActive      Boolean  @default(true) @map("is_active")
+  razorpaySubId String?  @map("razorpay_subscription_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("subscriptions")
+}
