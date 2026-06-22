@@ -4,9 +4,12 @@ const {
   comparePassword,
   signAccessToken,
   signRefreshToken,
+  verifyRefreshToken,
 } = require('../services/token.service')
+const { sendResetEmail } = require('../services/email.service')
 const { ok, created } = require('../utils/apiResponse')
 const AppError = require('../utils/AppError')
+const crypto = require('crypto')
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -76,4 +79,69 @@ const login = async (req, res, next) => {
   }
 }
 
-module.exports = { register, login }
+const refresh = async (req, res, next) => {
+  try {
+    const token = req.cookies?.refreshToken
+    if (!token) throw new AppError('Refresh token missing', 401)
+
+    const payload = verifyRefreshToken(token)
+
+    const user = await prisma.user.findUnique({ where: { id: payload.id } })
+    if (!user || !user.isActive) throw new AppError('User not found', 401)
+
+    const accessToken = signAccessToken({ id: user.id, role: user.role })
+    ok(res, { accessToken }, 'Token refreshed')
+  } catch (err) {
+    next(err)
+  }
+}
+
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body
+    const user = await prisma.user.findUnique({ where: { email } })
+
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex')
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 min
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { resetToken: token, resetTokenAt: expiresAt },
+      })
+
+      await sendResetEmail(email, token).catch(() => {}) // don't fail if email fails
+    }
+
+    // Always return 200 — prevents email enumeration
+    ok(res, null, 'If that email exists, a reset link has been sent')
+  } catch (err) {
+    next(err)
+  }
+}
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body
+    if (!token || !newPassword) throw new AppError('token and newPassword required', 400)
+
+    const user = await prisma.user.findFirst({ where: { resetToken: token } })
+    if (!user) throw new AppError('Invalid or expired token', 400)
+
+    if (user.resetTokenAt < new Date()) {
+      throw new AppError('Reset token has expired', 400)
+    }
+
+    const passwordHash = await hashPassword(newPassword)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetToken: null, resetTokenAt: null },
+    })
+
+    ok(res, null, 'Password reset successful')
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { register, login, refresh, forgotPassword, resetPassword }
