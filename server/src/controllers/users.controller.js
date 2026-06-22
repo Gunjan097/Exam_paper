@@ -27,9 +27,12 @@ const getMe = async (req, res, next) => {
 const updateMe = async (req, res, next) => {
   try {
     const { name } = req.body
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      throw new AppError('name is required', 400)
+    }
     const user = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name },
+      data: { name: name.trim() },
     })
     ok(res, { user: safeUser(user) }, 'Profile updated')
   } catch (err) {

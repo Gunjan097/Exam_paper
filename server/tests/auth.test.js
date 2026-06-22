@@ -30,6 +30,7 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.body.success).toBe(true)
     expect(res.body.data.accessToken).toBeDefined()
     expect(res.body.data.user.email).toBe(body.email)
+    expect(res.body.data.user.passwordHash).toBeUndefined()
     expect(res.headers['set-cookie']).toBeDefined()
   })
 
@@ -70,6 +71,7 @@ describe('POST /api/v1/auth/login', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.data.accessToken).toBeDefined()
+    expect(res.body.data.user.passwordHash).toBeUndefined()
     expect(res.headers['set-cookie']).toBeDefined()
   })
 
@@ -142,11 +144,12 @@ describe('POST /api/v1/auth/reset-password', () => {
   test('200 — valid token resets password', async () => {
     const crypto = require('crypto')
     const token = crypto.randomBytes(32).toString('hex')
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
     const futureDate = new Date(Date.now() + 10 * 60 * 1000)
 
     prisma.user.findFirst.mockResolvedValue({
       id: 'u1',
-      resetToken: token,
+      resetToken: tokenHash,
       resetTokenAt: futureDate,
     })
     prisma.user.update.mockResolvedValue({ id: 'u1' })
@@ -159,16 +162,19 @@ describe('POST /api/v1/auth/reset-password', () => {
   })
 
   test('400 — expired token', async () => {
+    const crypto = require('crypto')
+    const token = 'sometoken'
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
     const pastDate = new Date(Date.now() - 60 * 1000)
     prisma.user.findFirst.mockResolvedValue({
       id: 'u1',
-      resetToken: 'sometoken',
+      resetToken: tokenHash,
       resetTokenAt: pastDate,
     })
 
     const res = await request
       .post('/api/v1/auth/reset-password')
-      .send({ token: 'sometoken', newPassword: 'NewPass1!' })
+      .send({ token, newPassword: 'NewPass1!' })
 
     expect(res.status).toBe(400)
   })

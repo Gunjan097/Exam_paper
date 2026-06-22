@@ -86,6 +86,7 @@ model User {
   papers       Paper[]
   questions    Question[]
 
+  @@index([resetToken])
   @@map("users")
 }
 

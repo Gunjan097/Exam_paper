@@ -52,6 +52,14 @@ describe('PUT /api/v1/users/me', () => {
     expect(res.status).toBe(200)
     expect(res.body.data.user.name).toBe('New Name')
   })
+
+  test('400 — empty name rejected', async () => {
+    const res = await request
+      .put('/api/v1/users/me')
+      .set(authHeader())
+      .send({ name: '' })
+    expect(res.status).toBe(400)
+  })
 })
 
 describe('PUT /api/v1/users/me/password', () => {

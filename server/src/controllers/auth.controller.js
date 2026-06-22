@@ -13,7 +13,7 @@ const crypto = require('crypto')
 
 const COOKIE_OPTS = {
   httpOnly: true,
-  sameSite: 'strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
   secure: process.env.NODE_ENV === 'production',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7d in ms
 }
@@ -103,14 +103,15 @@ const forgotPassword = async (req, res, next) => {
 
     if (user) {
       const token = crypto.randomBytes(32).toString('hex')
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 min
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { resetToken: token, resetTokenAt: expiresAt },
+        data: { resetToken: tokenHash, resetTokenAt: expiresAt },
       })
 
-      await sendResetEmail(email, token).catch(() => {}) // don't fail if email fails
+      await sendResetEmail(email, token).catch(() => {}) // raw token goes in email link; don't fail if email fails
     }
 
     // Always return 200 — prevents email enumeration
@@ -125,7 +126,8 @@ const resetPassword = async (req, res, next) => {
     const { token, newPassword } = req.body
     if (!token || !newPassword) throw new AppError('token and newPassword required', 400)
 
-    const user = await prisma.user.findFirst({ where: { resetToken: token } })
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+    const user = await prisma.user.findFirst({ where: { resetToken: tokenHash } })
     if (!user) throw new AppError('Invalid or expired token', 400)
 
     if (user.resetTokenAt < new Date()) {
