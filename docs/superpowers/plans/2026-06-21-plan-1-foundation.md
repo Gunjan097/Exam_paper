@@ -1805,7 +1805,7 @@ git commit -m "feat: add superadmin seed script"
 
 ```bash
 cd /home/kharra/Documents/projects/exam
-npx create-next-app@14 client --js --app --no-tailwind --no-src-dir --eslint --no-turbopack
+npx create-next-app@14 client --js --app --no-tailwind --src-dir --eslint --no-turbopack --import-alias "@/*"
 ```
 
 When prompted, answer: No to Tailwind (we'll add manually), Yes to App Router.
@@ -1925,7 +1925,7 @@ export const config = {
 }
 ```
 
-- [ ] **Step 7: Create client/app/layout.jsx**
+- [ ] **Step 7: Create client/src/app/layout.jsx**
 
 ```jsx
 import './globals.css'
@@ -1944,7 +1944,7 @@ export default function RootLayout({ children }) {
 }
 ```
 
-- [ ] **Step 8: Create client/app/(auth)/login/page.jsx**
+- [ ] **Step 8: Create client/src/app/(auth)/login/page.jsx**
 
 ```jsx
 'use client'
@@ -2008,7 +2008,7 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 9: Create client/app/(auth)/register/page.jsx**
+- [ ] **Step 9: Create client/src/app/(auth)/register/page.jsx**
 
 ```jsx
 'use client'
@@ -2063,7 +2063,7 @@ export default function RegisterPage() {
 }
 ```
 
-- [ ] **Step 10: Create client/app/(auth)/forgot-password/page.jsx**
+- [ ] **Step 10: Create client/src/app/(auth)/forgot-password/page.jsx**
 
 ```jsx
 'use client'
@@ -2117,7 +2117,7 @@ export default function ForgotPasswordPage() {
 }
 ```
 
-- [ ] **Step 11: Create client/app/dashboard/page.jsx (stub)**
+- [ ] **Step 11: Create client/src/app/dashboard/page.jsx (stub)**
 
 ```jsx
 export default function DashboardPage() {
