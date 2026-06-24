@@ -11,6 +11,15 @@ const prisma = {
     create: jest.fn(),
     update: jest.fn(),
   },
+  question: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    createMany: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+  },
   $disconnect: jest.fn(),
 }
 
